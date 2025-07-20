@@ -55,10 +55,11 @@ void initGL() {
     glDeleteShader(fragmentShader);
 
     // Set background color
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    glClearColor(0.1f, 1.1f, 0.1f, 1.0f);
 
     // Viewport
-    int width, height;
+    int width=480;
+    int height=600;
     SDL_GL_GetDrawableSize(window, &width, &height);
     glViewport(0, 0, width, height);
 
