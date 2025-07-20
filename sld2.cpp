@@ -1,50 +1,85 @@
 #include <SDL.h>
-#include <GLES3/gl3.h>
+#include <SDL_opengl.h>
 #include <emscripten.h>
-#include <iostream>
 
-SDL_Window* window = nullptr;
-SDL_GLContext glContext = nullptr;
+// Screen dimensions
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
 
-void render() {
-    glClearColor(0.9f, 0.3f, 0.1f, 1.0f); // czerwono-pomarańczowe tło
-    glClear(GL_COLOR_BUFFER_BIT);
-    SDL_GL_SwapWindow(window);
-    EM_ASM(console.log("render() called"));
-}
+// SDL window and OpenGL context
+SDL_Window* gWindow = nullptr;
+SDL_GLContext gContext;
 
-int main() {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        std::cerr << "SDL_Init error: " << SDL_GetError() << "\n";
-        return 1;
+bool init() {
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return false;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    // Use OpenGL ES 2.0
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    window = SDL_CreateWindow("SDL2 + WebGL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
-    if (!window) {
-        std::cerr << "SDL_CreateWindow error: " << SDL_GetError() << "\n";
-        return 1;
+    // Create window
+    gWindow = SDL_CreateWindow("Blue OpenGL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+    if (gWindow == nullptr) {
+        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        return false;
     }
 
-    glContext = SDL_GL_CreateContext(window);
-    if (!glContext) {
-        std::cerr << "SDL_GL_CreateContext error: " << SDL_GetError() << "\n";
-        return 1;
-    } else {
-        std::cout << "GL context created successfully!\n";
+    // Create OpenGL context
+    gContext = SDL_GL_CreateContext(gWindow);
+    if (gContext == nullptr) {
+        printf("OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+        return false;
     }
 
-    int w, h;
-    SDL_GL_GetDrawableSize(window, &w, &h);
-    std::cout << "Viewport: " << w << "x" << h << "\n";
-    glViewport(0, 0, w, h);
+    // Initialize OpenGL
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glClearColor(0.0f, 0.0f, 1.0f, 1.0f); // Blue color
 
-    emscripten_set_main_loop(render, 0, 1);
+    return true;
+}
 
+void render() {
+    glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer
+    SDL_GL_SwapWindow(gWindow);   // Update the screen
+}
+
+void close() {
+    // Destroy context and window
+    SDL_GL_DeleteContext(gContext);
+    SDL_DestroyWindow(gWindow);
+    gWindow = nullptr;
+
+    // Quit SDL subsystems
     SDL_Quit();
+}
+
+void main_loop() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e) != 0) {
+        if (e.type == SDL_QUIT) {
+            emscripten_cancel_main_loop(); // Stop the loop if the user quits
+        }
+    }
+    render();
+}
+
+int main(int argc, char* args[]) {
+    if (!init()) {
+        printf("Failed to initialize!\n");
+        return 1;
+    }
+
+    // Use emscripten_set_main_loop for continuous rendering in the browser
+    emscripten_set_main_loop(main_loop, 0, 1); // 0 for infinite loop, 1 for simulate_infinite_loop
+
+    // The close function will be called when the browser tab is closed or the program exits
+    // due to emscripten_cancel_main_loop or a manual exit.
+    atexit(close);
+
     return 0;
 }
