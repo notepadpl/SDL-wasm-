@@ -1,4 +1,4 @@
-name: Compile C to WebAssembly and Deploy
+name: Compile C to WebAssebly and Deploy
 
 on:
   push:
