@@ -82,6 +82,10 @@ void initGL() {
 }
 
 void render() {
+   std::cout << "Render frame\n";
+    EM_ASM({ console.log("Render frame (WASM)"); });
+
+    
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
