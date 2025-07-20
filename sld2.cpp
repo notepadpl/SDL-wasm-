@@ -403,7 +403,7 @@ ws);
 
     }
 
-    emscripten_set_main_loop(main_loop, -1, 1);
+    //emscripten_set_main_loop(main_loop, -1, 1);
 
 
     return EXIT_SUCCESS;
