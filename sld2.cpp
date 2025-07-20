@@ -8,6 +8,7 @@ SDL_GLContext glContext = nullptr;
 GLuint shaderProgram, vao;
 
 const char* vertexShaderSource = R"(
+    precision mediump float;
     attribute vec2 aPos;
     void main() {
         gl_Position = vec4(aPos, 0.0, 1.0);
@@ -21,33 +22,47 @@ const char* fragmentShaderSource = R"(
     }
 )";
 
-void render() {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(shaderProgram);
-    glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    SDL_GL_SwapWindow(window);
+void checkShader(GLuint shader, const char* name) {
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        char infoLog[512];
+        glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+        std::cerr << "Shader error (" << name << "): " << infoLog << std::endl;
+    }
 }
 
-GLuint compileShader(GLenum type, const char* source) {
+GLuint compileShader(GLenum type, const char* source, const char* name) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
     glCompileShader(shader);
+    checkShader(shader, name);
     return shader;
 }
 
 void initGL() {
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+    // Compile shaders
+    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource, "vertex");
+    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource, "fragment");
 
     shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
     glBindAttribLocation(shaderProgram, 0, "aPos");
     glLinkProgram(shaderProgram);
+
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    // Set background color
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+    // Viewport
+    int width, height;
+    SDL_GL_GetDrawableSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+
+    // Triangle vertices
     float vertices[] = {
         -0.5f, -0.5f,
          0.5f, -0.5f,
@@ -57,6 +72,7 @@ void initGL() {
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glGenVertexArrays(1, &vao);
+
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -64,14 +80,24 @@ void initGL() {
     glEnableVertexAttribArray(0);
 }
 
+void render() {
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(shaderProgram);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    SDL_GL_SwapWindow(window);
+}
+
 int main() {
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);  // ← WebGL 2 / ES 3
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    window = SDL_CreateWindow("WebGL + SDL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("WebGL2 + SDL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                              800, 600, SDL_WINDOW_OPENGL);
     glContext = SDL_GL_CreateContext(window);
 
     initGL();
