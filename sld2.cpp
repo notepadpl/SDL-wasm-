@@ -7,9 +7,10 @@ SDL_Window* window = nullptr;
 SDL_GLContext glContext = nullptr;
 
 void render() {
-    glClearColor(0.1f, 0.2f, 0.8f, 1.0f); // niebieskawe tło
+    glClearColor(0.9f, 0.3f, 0.1f, 1.0f); // czerwono-pomarańczowe tło
     glClear(GL_COLOR_BUFFER_BIT);
     SDL_GL_SwapWindow(window);
+    EM_ASM(console.log("render() called"));
 }
 
 int main() {
@@ -18,13 +19,12 @@ int main() {
         return 1;
     }
 
-    // Ustawienia WebGL (OpenGL ES 3.0)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    window = SDL_CreateWindow("Kolorowe okno SDL2 + GL", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("SDL2 + WebGL2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
     if (!window) {
         std::cerr << "SDL_CreateWindow error: " << SDL_GetError() << "\n";
         return 1;
@@ -34,14 +34,15 @@ int main() {
     if (!glContext) {
         std::cerr << "SDL_GL_CreateContext error: " << SDL_GetError() << "\n";
         return 1;
+    } else {
+        std::cout << "GL context created successfully!\n";
     }
 
-    // Viewport – obowiązkowy dla WebGL!
-    int width, height;
-    SDL_GL_GetDrawableSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    int w, h;
+    SDL_GL_GetDrawableSize(window, &w, &h);
+    std::cout << "Viewport: " << w << "x" << h << "\n";
+    glViewport(0, 0, w, h);
 
-    std::cout << "Start render loop\n";
     emscripten_set_main_loop(render, 0, 1);
 
     SDL_Quit();
